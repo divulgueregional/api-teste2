@@ -1,8 +1,8 @@
 # WhatsAPI
 
-> An awesome WhatsApp API based on TypeScript
+> Uma incrível API do WhatsApp baseada em TypeScript
 
-## Project structure
+## Estrutura do projeto
 
 <pre>
 .
@@ -37,73 +37,22 @@
 `-- views
     `-- swagger.ejs
 
-10 directories, 20 files
+10 diretórios, 20 arquivos
 
 </pre>
 
-## Updating to newer versions
+## Requisitos
 
 ```shell
-git add .
-git commit -m "commit_message"
-git push origin master
+node version 18.20.2
+git version 2.25.1
+npm version 10.5.0
+pm2 version 5.2.2
 ```
 
-<hr>
+## Processo de inatalação
 
-# Server Commands
-
-## Installing latest version of node js
-
-```shell
-curl -sL https://rpm.nodesource.com/setup_16.x | sudo bash -
-sudo yum install nodejs
-sudo npm install -g npm@latest
-```
-
-## Installing required packages
-
-```shell
-sudo npm install -g pm2
-```
-
-## Builing the project
-
-```shell
-cd api
-npm build
-```
-
-## Starting the project
-
-```shell
-sudo pm2 start npm --name WhatsAPINodeJs -- run "start:prod"
-sudo pm2 status WhatsAPINodeJs
-sudo pm2 restart WhatsAPINodeJs
-```
-
-## Deploying new versions
-
-```shell
-git pull origin master
-npm install
-npm run-script build
-pm2 restart WhatsAPI
-```
-
-## Meu processo
-
-# definir senha do usuario root
-
-digite comando abaixo e após insira a senha do usuario root
-
-```shell
-cd ~
-sudo -i
-bash <(wget -qO- https://raw.githubusercontent.com/leitura/senharoot/main/senharoot.sh)
-```
-
-# Instando o nodejs v16.15.1
+# Instando o nodejs v18.20.2
 
 ```shell
 cd ~
@@ -117,14 +66,16 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-nvm install 16.15.1
+nvm install 18.20.2
 node -v
 
-# instalação antiga
-#curl -sL https://deb.nodesource.com/setup_16.x -o nodesource_setup.sh
-#sudo bash nodesource_setup.sh
-#sudo apt-get install -y nodejs
-#node -v
+
+ou Atualizar para a versão 18
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+source ~/.bashrc
+nvm install 18
+node -v
+npm -v
 ```
 
 ## Instando o GIT
@@ -134,7 +85,7 @@ sudo apt-get install git
 git --version
 ```
 
-## Baixando a api do bayleys
+## Baixando a api
 
 ```shell
 git clone https://github.com/divulgueregional/api-teste2
@@ -159,8 +110,6 @@ sudo apt-get install nano
 
 ```shell
 cd api
-# renomei o arquivo .env.development para .env
-mv .env.development .env
 # aletarar .env
 nano .env
 # use a seta e Edite o arquivo conforme necessário
@@ -214,6 +163,38 @@ editar: insert;
 salvar e sair: :wq;
 salvar: :w;
 sair: :q
+
+# Resolver problema do sempre online
+
+Quando conectar o qrcode vai mostrar que está sempre online.<br>
+Para desbilitar precisa adicionar markOnlineOnConnect: false.<br>
+src/services/Instance.ts<br>
+this.socketConfig = {
+printQRInTerminal: false,
+markOnlineOnConnect: false,
+msgRetryCounterMap: this.msgRetryCounterMap,
+browser: [env.BROWSER_CLIENT, env.BROWSER_NAME, "10.0"],
+auth: this.authState.state,
+logger: PinoLogger({
+level: "silent",
+}),
+getMessage: this.msgHandler.messageRetryHandler,
+};
+<br>
+após rebuild e reinicie o serviço<br>
+
+- pm2 status ou pm2 list<br>
+- pm2 restart 0<br>
+  ou<br>
+- pm2 kill para excluir tudo<br>
+- pm2 delete 0 para excluir específio<br>
+- npm run-script build<br>
+- pm2 start npm --name WhatsAPINodeJs -- run "start:prod"<br>
+
+```shell
+pm2 restart 0
+pm2 restart all
+```
 
 # Comandos pm2
 
@@ -292,4 +273,14 @@ Como etapa final, você pode executar o comando abaixo para remover todos os arq
 
 ```shell
 sudo apt-get autoremove
+```
+
+# definir senha do usuario root
+
+digite comando abaixo e após insira a senha do usuario root
+
+```shell
+cd ~
+sudo -i
+bash <(wget -qO- https://raw.githubusercontent.com/leitura/senharoot/main/senharoot.sh)
 ```
