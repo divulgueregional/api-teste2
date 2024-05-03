@@ -167,6 +167,8 @@ sair: :q
 # Resolver problema do sempre online
 
 Quando conectar o qrcode vai mostrar que está sempre online.<br>
+Padrão da api já está false<br>
+Caso quiser ficar sempre online colcoa true<br>
 Para desbilitar precisa adicionar markOnlineOnConnect: false.<br>
 src/services/Instance.ts<br>
 this.socketConfig = {<br>
