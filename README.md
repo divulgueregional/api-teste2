@@ -169,17 +169,17 @@ sair: :q
 Quando conectar o qrcode vai mostrar que está sempre online.<br>
 Para desbilitar precisa adicionar markOnlineOnConnect: false.<br>
 src/services/Instance.ts<br>
-this.socketConfig = {
-printQRInTerminal: false,
-markOnlineOnConnect: false,
-msgRetryCounterMap: this.msgRetryCounterMap,
-browser: [env.BROWSER_CLIENT, env.BROWSER_NAME, "10.0"],
-auth: this.authState.state,
-logger: PinoLogger({
-level: "silent",
-}),
-getMessage: this.msgHandler.messageRetryHandler,
-};
+this.socketConfig = {<br>
+printQRInTerminal: false,<br>
+markOnlineOnConnect: false,<br>
+msgRetryCounterMap: this.msgRetryCounterMap,<br>
+browser: [env.BROWSER_CLIENT, env.BROWSER_NAME, "10.0"],<br>
+auth: this.authState.state,<br>
+logger: PinoLogger({<br>
+level: "silent",<br>
+}),<br>
+getMessage: this.msgHandler.messageRetryHandler,<br>
+};<br>
 <br>
 após rebuild e reinicie o serviço<br>
 
