@@ -9,12 +9,12 @@ import makeWASocket, {
   Contact,
   DisconnectReason,
   DownloadableMessage,
-  downloadContentFromMessage,
   MessageRetryMap,
-  proto,
-  useMultiFileAuthState,
   UserFacingSocketConfig,
   WAMessage,
+  downloadContentFromMessage,
+  proto,
+  useMultiFileAuthState,
 } from "@whiskeysockets/baileys";
 import axios from "axios";
 import * as dotenv from "dotenv";
@@ -162,6 +162,7 @@ export class WhatsAppInstance {
 
     this.socketConfig = {
       printQRInTerminal: false,
+      markOnlineOnConnect: false,
       msgRetryCounterMap: this.msgRetryCounterMap,
       browser: [env.BROWSER_CLIENT, env.BROWSER_NAME, "10.0"],
       auth: this.authState.state,
