@@ -193,9 +193,13 @@ após rebuild e reinicie o serviço<br>
 - npm run-script build<br>
 - pm2 start npm --name WhatsAPINodeJs -- run "start:prod"<br>
 
-```shell
+```shell pm2 status ou pm2 list<br>
 pm2 restart 0
-pm2 restart all
+  ou<br>
+pm2 kill para excluir tudo
+pm2 delete 0 para excluir específio
+npm run-script build
+pm2 start npm --name WhatsAPINodeJs -- run "start:prod"
 ```
 
 # Comandos pm2
