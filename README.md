@@ -137,7 +137,7 @@ git --version
 ## Baixando a api do bayleys
 
 ```shell
-git clone https://github.com/divulgueregional/api-teste2/api-teste
+git clone https://github.com/divulgueregional/api-teste2
 ```
 
 ## Instalação complementar
