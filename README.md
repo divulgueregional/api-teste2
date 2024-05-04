@@ -185,15 +185,8 @@ getMessage: this.msgHandler.messageRetryHandler,<br>
 <br>
 após rebuild e reinicie o serviço<br>
 
-- pm2 status ou pm2 list<br>
-- pm2 restart 0<br>
-  ou<br>
-- pm2 kill para excluir tudo<br>
-- pm2 delete 0 para excluir específio<br>
-- npm run-script build<br>
-- pm2 start npm --name WhatsAPINodeJs -- run "start:prod"<br>
-
 ```shell pm2 status ou pm2 list<br>
+npm rebuild WhatsAPINodeJs
 pm2 restart 0
   ou<br>
 pm2 kill para excluir tudo
@@ -290,3 +283,24 @@ cd ~
 sudo -i
 bash <(wget -qO- https://raw.githubusercontent.com/leitura/senharoot/main/senharoot.sh)
 ```
+
+# mudar repositório antes de instalar
+
+para mudar o repositorio<br>
+antigo<br>
+@adiwajshing<br>
+
+novo<br>
+@whiskeysockets<br>
+WhiskeySockets<br>
+<br>
+Alterar os arquivos antes de instalar<br>
+src/services/instance.ts - linha 18<br>
+<br>
+package.json <br>
+
+- linha 6 e 7: comparar a versão do node e npm se está igual ao servidor <br>
+- linha 20: referenciar o repo do github ("@whiskeysockets/baileys": "github:WhiskeySockets/Baileys",)<br>
+- linha 31: axios ver a versão caso parar o qrcode<br>
+  Alterar os arquivos após de instalar<br>
+  node_modules/@adiwajshing/baileys (pasta)<br>
