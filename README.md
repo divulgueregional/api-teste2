@@ -286,11 +286,19 @@ bash <(wget -qO- https://raw.githubusercontent.com/leitura/senharoot/main/senhar
 
 # Atualizar a api
 
+atualizar rápido
+
+```shell
+npm update
+```
+
+atualizar completa
+
 ```shell
 pm2 kill
 npm update
 npm run-script build
-pm2 start npm --name WhatsAPINodeJs -- run "start:prod"
+pm2
 ```
 
 # versao da baileys
