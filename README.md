@@ -284,6 +284,13 @@ sudo -i
 bash <(wget -qO- https://raw.githubusercontent.com/leitura/senharoot/main/senharoot.sh)
 ```
 
+# Atualizar a api
+
+pm2 kill
+pm2 update
+npm run-script build
+pm2 start npm --name WhatsAPINodeJs -- run "start:prod"
+
 # mudar repositório antes de instalar
 
 para mudar o repositorio<br>
