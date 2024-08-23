@@ -298,7 +298,7 @@ atualizar completa
 pm2 kill
 npm update
 npm run-script build
-pm2
+pm2 start npm --name WhatsAPINodeJs -- run "start:prod"
 ```
 
 # versao da baileys
