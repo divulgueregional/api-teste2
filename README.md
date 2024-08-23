@@ -288,10 +288,15 @@ bash <(wget -qO- https://raw.githubusercontent.com/leitura/senharoot/main/senhar
 
 ```shell
 pm2 kill
-pm2 update
+npm update
 npm run-script build
 pm2 start npm --name WhatsAPINodeJs -- run "start:prod"
 ```
+
+# versao da baileys
+
+node_modules/@whiskeysockets/baileys/package.json<br>
+"version": "6.7.7",
 
 # mudar repositório antes de instalar
 
