@@ -6,7 +6,10 @@ logs
 npm-debug.log*
 
 # instances/
-# instances_data/
+/instances_data/*
+!/instances_data/.gitkeep
+/instance_data/*
+!/instance_data/.gitkeep
 
 package-lock.json
 

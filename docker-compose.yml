@@ -11,6 +11,9 @@ services:
     image: whats-api/server:latest
     ports:
       - "8081:8081"
+    volumes:
+      - ./instances_data:/app/instances_data
+      - ./instance_data:/app/instance_data
     stdin_open: true  # -i
     tty: true         # -t
 

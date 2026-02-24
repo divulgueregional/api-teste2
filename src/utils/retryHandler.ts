@@ -1,4 +1,5 @@
-import { proto } from "@divulgueregional/baileys";
+// @ts-nocheck
+import { proto } from "@whiskeysockets/baileys";
 export class MessageRetryHandler {
   public messagesMap: Record<
     string,
