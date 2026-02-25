@@ -118,6 +118,8 @@ export class WhatsAppInstance {
       });
     }
 
+    this.saveWebhookConfig();
+
     return {
       url: this.secondaryWebhookUrl,
       sendMessage: this.sendSecondaryWebhookMessage,
@@ -154,6 +156,48 @@ export class WhatsAppInstance {
     this.disableWebhook = disableWebhook;
 
     this.msgHandler = new MessageRetryHandler();
+    this.loadWebhookConfig();
+  }
+
+  private getWebhookConfigFile() {
+    return `./instances_data/${this.key}/webhook_config.json`;
+  }
+
+  private loadWebhookConfig() {
+    try {
+      const filePath = this.getWebhookConfigFile();
+      if (fs.existsSync(filePath)) {
+        const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+        if (data.url) {
+          this.secondaryWebhookUrl = data.url;
+          this.secondaryWebhookClient = axios.create({
+            baseURL: data.url,
+          });
+        }
+        if (data.sendMessage !== undefined) {
+          this.sendSecondaryWebhookMessage = data.sendMessage;
+        }
+      }
+    } catch (error) {
+      console.log("Error loading webhook config:", error);
+    }
+  }
+
+  private saveWebhookConfig() {
+    try {
+      const dirPath = `./instances_data/${this.key}`;
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+      const filePath = this.getWebhookConfigFile();
+      const config = {
+        url: this.secondaryWebhookUrl,
+        sendMessage: this.sendSecondaryWebhookMessage,
+      };
+      fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
+    } catch (error) {
+      console.log("Error saving webhook config:", error);
+    }
   }
 
   // Method to start the WhatsApp handlers and connect to WhatsApp
@@ -161,6 +205,7 @@ export class WhatsAppInstance {
     this.authState = await useMultiFileAuthState(
       `./instances_data/${this.key}`
     );
+    this.loadWebhookConfig(); // Reload after auth state just in case
 
     this.socketConfig = {
       printQRInTerminal: false,
