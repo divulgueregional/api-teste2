@@ -338,9 +338,33 @@ export class WhatsAppInstance {
 
         // LID Resolution: Try to find the phone number if JID is a LID
         if (m.key.remoteJid && m.key.remoteJid.endsWith("@lid")) {
-          const contact = this.instance.contacts.find(c => c.id === m.key.remoteJid || (c as any).lid === m.key.remoteJid);
-          if (contact && contact.id && contact.id.endsWith("@s.whatsapp.net")) {
-            messageToSend.resolvedJid = contact.id;
+          // Busca exaustiva: procurr por ID igual ao LID ou campo .lid igual ao LID
+          const contact = this.instance.contacts.find(c =>
+            c.id === m.key.remoteJid ||
+            (c as any).lid === m.key.remoteJid ||
+            (c as any).pwaLid === m.key.remoteJid
+          );
+
+          if (contact) {
+            // Se o ID do contato já for o número de telefone, usamos ele
+            if (contact.id.endsWith("@s.whatsapp.net")) {
+              messageToSend.resolvedJid = contact.id;
+            } else {
+              // Se não, procuramos outro contato que tenha esse mesmo LID mas com ID de telefone
+              const phoneContact = this.instance.contacts.find(c =>
+                (c.id.endsWith("@s.whatsapp.net")) &&
+                ((c as any).lid === m.key.remoteJid || (c as any).pwaLid === m.key.remoteJid)
+              );
+              if (phoneContact) {
+                messageToSend.resolvedJid = phoneContact.id;
+              }
+            }
+          }
+
+          if (!messageToSend.resolvedJid) {
+            console.log(`[LID INFO] Não foi possível resolver o LID ${m.key.remoteJid} para telefone ainda.`);
+          } else {
+            console.log(`[LID SUCCESS] LID ${m.key.remoteJid} resolvido para ${messageToSend.resolvedJid}`);
           }
         }
 
