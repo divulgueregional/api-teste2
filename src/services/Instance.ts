@@ -451,7 +451,7 @@ export class WhatsAppInstance {
   }
 
   createId(jid: string) {
-    if (jid.includes("@g.us") || jid.includes("@s.whatsapp.net")) {
+    if (jid.includes("@g.us") || jid.includes("@s.whatsapp.net") || jid.includes("@lid")) {
       return jid;
     }
 
@@ -460,7 +460,7 @@ export class WhatsAppInstance {
 
   // Check if jid is registered on WhatsApp
   async isRegistered(jid: string) {
-    if (jid.includes("@g.us")) {
+    if (jid.includes("@g.us") || jid.includes("@lid")) {
       return { exists: true, jid };
     }
 
