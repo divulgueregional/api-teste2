@@ -265,8 +265,28 @@ export class WhatsAppInstance {
     });
 
     // Handle receiving initial contacts
+    socket?.ev.on("contacts.set", ({ contacts }) => {
+      this.instance.contacts = contacts;
+    });
+
     socket?.ev.on("contacts.upsert", (contacts) => {
-      this.instance.contacts.push(...contacts);
+      contacts.forEach(contact => {
+        const index = this.instance.contacts.findIndex(c => c.id === contact.id);
+        if (index > -1) {
+          this.instance.contacts[index] = { ...this.instance.contacts[index], ...contact };
+        } else {
+          this.instance.contacts.push(contact);
+        }
+      });
+    });
+
+    socket?.ev.on("contacts.update", (updates) => {
+      for (const update of updates) {
+        const index = this.instance.contacts.findIndex((c) => c.id === update.id);
+        if (index !== -1) {
+          this.instance.contacts[index] = { ...this.instance.contacts[index], ...update };
+        }
+      }
     });
 
     // Handle incoming call
@@ -315,6 +335,14 @@ export class WhatsAppInstance {
           jid: this.instance.socket?.user.id,
           messageType,
         };
+
+        // LID Resolution: Try to find the phone number if JID is a LID
+        if (m.key.remoteJid && m.key.remoteJid.endsWith("@lid")) {
+          const contact = this.instance.contacts.find(c => c.id === m.key.remoteJid || (c as any).lid === m.key.remoteJid);
+          if (contact && contact.id && contact.id.endsWith("@s.whatsapp.net")) {
+            messageToSend.resolvedJid = contact.id;
+          }
+        }
 
         // if it is a text message
         if (messageType === "conversation") {
