@@ -246,29 +246,28 @@ export class WhatsAppInstance {
 
     const numericPart = jid.split('@')[0];
 
-    // 1. Busca profunda em TODOS os contatos filtrando propriedades do Baileys
-    for (const c of this.instance.contacts) {
-      const extra = c as any;
-      const cId = c.id || "";
-
-      // Mapeamento de propriedades onde o Baileys/WhatsApp costuma guardar o vínculo
-      const isMatch =
-        cId === jid ||
-        extra.lid === jid ||
-        extra.pwaLid === jid ||
-        extra.pnJid === jid ||
-        (extra.jid && extra.jid === jid);
-
-      if (isMatch) {
-        if (cId.endsWith("@s.whatsapp.net")) return cId;
-        if (extra.id && extra.id.endsWith("@s.whatsapp.net")) return extra.id;
-        if (extra.pnJid && extra.pnJid.endsWith("@s.whatsapp.net")) return extra.pnJid;
-      }
+    // 1. Busca profunda em TODOS os contatos usando stringify para não perder campos ocultos
+    for (const contact of this.instance.contacts) {
+      try {
+        const contactStr = JSON.stringify(contact);
+        if (contactStr.includes(numericPart)) {
+          // Se encontrou o LID em qualquer lugar do objeto, procura por um JID de fone no mesmo objeto
+          const phoneMatch = contactStr.match(/\d+@s\.whatsapp\.net/);
+          if (phoneMatch) return phoneMatch[0];
+        }
+      } catch (e) { continue; }
     }
 
-    // 2. Fallback: Procura nos CHATS
-    const chat = this.instance.chats.find(c => c.id === jid || (c as any).lid === jid);
-    if (chat && chat.id.endsWith("@s.whatsapp.net")) return chat.id;
+    // 2. Fallback: Procura nos CHATS com a mesma lógica agressiva
+    for (const chat of this.instance.chats) {
+      try {
+        const chatStr = JSON.stringify(chat);
+        if (chatStr.includes(numericPart)) {
+          const phoneMatch = chatStr.match(/\d+@s\.whatsapp\.net/);
+          if (phoneMatch) return phoneMatch[0];
+        }
+      } catch (e) { continue; }
+    }
 
     return jid;
   }
