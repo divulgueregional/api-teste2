@@ -69,6 +69,7 @@ export class WhatsAppInstance {
     saveCreds: () => Promise<void>;
   };
   public disableWebhook = false;
+  private lidMappings: Record<string, string> = {}; // Cache local para mapeamentos LID -> PN
 
   public secondaryWebhookUrl = "";
   public sendSecondaryWebhookMessage: boolean = false;
@@ -244,29 +245,34 @@ export class WhatsAppInstance {
     if (!jid) return jid;
     if (jid.endsWith("@s.whatsapp.net")) return jid;
 
-    const numericPart = jid.split('@')[0];
+    // 1. Tenta pegar do cache local de mapeamentos (lid-mapping.update)
+    if (this.lidMappings[jid]) return this.lidMappings[jid];
 
-    // 1. Busca profunda em TODOS os contatos usando stringify para não perder campos ocultos
-    for (const contact of this.instance.contacts) {
-      try {
-        const contactStr = JSON.stringify(contact);
-        if (contactStr.includes(numericPart)) {
-          // Se encontrou o LID em qualquer lugar do objeto, procura por um JID de fone no mesmo objeto
-          const phoneMatch = contactStr.match(/\d+@s\.whatsapp\.net/);
-          if (phoneMatch) return phoneMatch[0];
+    // 2. Tenta pegar do repositório interno da Baileys (Ponto chave da sua pesquisa!)
+    try {
+      const lidMapping = (this.instance.socket as any)?.signalRepository?.lidMapping;
+      if (lidMapping && typeof lidMapping.getPNForLID === 'function') {
+        const pnJid = lidMapping.getPNForLID(jid);
+        if (pnJid) {
+          this.lidMappings[jid] = pnJid; // Guarda no cache
+          return pnJid;
         }
-      } catch (e) { continue; }
+      }
+    } catch (e) {
+      // console.log("Erro ao acessar Signal Repository:", e);
     }
 
-    // 2. Fallback: Procura nos CHATS com a mesma lógica agressiva
-    for (const chat of this.instance.chats) {
-      try {
-        const chatStr = JSON.stringify(chat);
-        if (chatStr.includes(numericPart)) {
-          const phoneMatch = chatStr.match(/\d+@s\.whatsapp\.net/);
-          if (phoneMatch) return phoneMatch[0];
-        }
-      } catch (e) { continue; }
+    // 3. Busca profunda em TODOS os contatos filtrando propriedades do Baileys
+    for (const c of this.instance.contacts) {
+      const extra = c as any;
+      const cId = c.id || "";
+      const isMatch = cId === jid || extra.lid === jid || extra.pwaLid === jid || extra.pnJid === jid;
+
+      if (isMatch) {
+        if (cId.endsWith("@s.whatsapp.net")) return cId;
+        if (extra.pnJid && extra.pnJid.endsWith("@s.whatsapp.net")) return extra.pnJid;
+        if (extra.id && extra.id.endsWith("@s.whatsapp.net")) return extra.id;
+      }
     }
 
     return jid;
@@ -305,6 +311,15 @@ export class WhatsAppInstance {
 
     // listen for when the auth credentials is updated
     socket?.ev.on("creds.update", this.authState.saveCreds);
+
+    // ESCUTA O MAPEAMENTO DE LID (Sugerido pela sua pesquisa!)
+    // @ts-ignore
+    socket?.ev.on('lid-mapping.update', (mappings: any[]) => {
+      for (const mapping of mappings) {
+        console.log(`[LID MAPPING] Novo vínculo descoberto: ${mapping.lid} -> ${mapping.pn}`);
+        this.lidMappings[mapping.lid] = mapping.pn;
+      }
+    });
 
     // Handle initial receiving of the chats
     // @ts-ignore
