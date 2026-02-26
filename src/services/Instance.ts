@@ -20,7 +20,7 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import axios from "axios";
 import * as dotenv from "dotenv";
-import { rmSync } from "fs";
+import fs, { rmSync } from "fs";
 import https from "https"; // Added by Raj
 import PinoLogger from "pino";
 import * as Pusher from "pusher";
@@ -235,30 +235,51 @@ export class WhatsAppInstance {
     if (!jid) return jid;
     if (jid.endsWith("@s.whatsapp.net")) return jid;
 
-    // 1. Procura na lista de contatos
-    const contact = this.instance.contacts.find(c =>
-      c.id === jid ||
-      (c as any).lid === jid ||
-      (c as any).pwaLid === jid
-    );
+    const numericPart = jid.split('@')[0];
 
-    if (contact) {
-      if (contact.id.endsWith("@s.whatsapp.net")) {
-        return contact.id;
+    // Log para diagnóstico (visível no console do Docker)
+    console.log(`[LID DEBUG] Resolvendo ${jid}. Contatos em memória: ${this.instance.contacts.length}`);
+
+    // 1. Busca profunda em contatos
+    for (const c of this.instance.contacts) {
+      const cId = c.id || "";
+      const extra = c as any;
+
+      // Lista de possíveis campos onde o LID pode estar escondido
+      const possibleLids = [
+        extra.lid,
+        extra.pwaLid,
+        extra.phoneNumber,
+        extra.pnJid,
+        extra.actualJid
+      ].filter(Boolean).map(v => v.toString());
+
+      // Se o ID deste contato for o LID que buscamos, ou o LID estiver em algum campo extra
+      const isLidMatch = cId === jid || cId.includes(numericPart) || possibleLids.some(l => l === jid || l.includes(numericPart));
+
+      if (isLidMatch) {
+        // Se achamos o match, mas o ID é o LID, tentamos pegar o fone de outro campo
+        if (cId.endsWith("@s.whatsapp.net")) return cId;
+        if (extra.pnJid && extra.pnJid.endsWith("@s.whatsapp.net")) return extra.pnJid;
+        if (extra.id && extra.id.endsWith("@s.whatsapp.net")) return extra.id;
       }
-      // Se o contato acima for o próprio LID, procuramos outro que tenha este LID mas ID de telefone
-      const phoneContact = this.instance.contacts.find(c =>
-        c.id.endsWith("@s.whatsapp.net") &&
-        ((c as any).lid === jid || (c as any).pwaLid === jid)
-      );
-      if (phoneContact) return phoneContact.id;
     }
 
-    // 2. Procura na lista de chats como fallback
-    const chat = this.instance.chats.find(c => (c as any).lid === jid || c.id === jid);
-    if (chat && chat.id.endsWith("@s.whatsapp.net")) {
-      return chat.id;
-    }
+    // 2. Busca reversa: Percorre tudo de novo procurando quem tem esse LID associado
+    // (Caso o contato principal seja o Telefone e ele tenha o LID como propriedade)
+    const reverseMatch = this.instance.contacts.find(c => {
+      if (!c.id.endsWith("@s.whatsapp.net")) return false;
+      const ex = c as any;
+      return ex.lid === jid || ex.pwaLid === jid || (ex.lid && ex.lid.includes(numericPart)) || (ex.pwaLid && ex.pwaLid.includes(numericPart));
+    });
+
+    if (reverseMatch) return reverseMatch.id;
+
+    // 3. Fallback para histórico de chats
+    const chatMatch = this.instance.chats.find(c =>
+      c.id === jid || (c as any).lid === jid || (c as any).lid?.includes(numericPart)
+    );
+    if (chatMatch && chatMatch.id.endsWith("@s.whatsapp.net")) return chatMatch.id;
 
     return jid;
   }
