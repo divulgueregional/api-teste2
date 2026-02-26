@@ -421,21 +421,6 @@ export class WhatsAppInstance {
       t.messages.map(async (m) => {
         if (!m.message) return; // if there is no text or media message
 
-        // DEBUG: Grava o objeto bruto e diagnóstico de contatos
-        if (this.key === "drsystema") {
-          try {
-            const rawDir = path.resolve(process.cwd(), "instances_data", "webhooks");
-            if (!fs.existsSync(rawDir)) fs.mkdirSync(rawDir, { recursive: true });
-            const rawPath = path.join(rawDir, "drsystema_raw_message.txt");
-            const contactCount = this.instance.contacts.length;
-            const contactSample = this.instance.contacts.slice(0, 3).map(c => c.id);
-            const logEntry = `\n--- MSG @ ${new Date().toISOString()} ---\nContacts: ${contactCount}\nSamples: ${JSON.stringify(contactSample)}\n${JSON.stringify(m, null, 2)}\n`;
-            fs.appendFileSync(rawPath, logEntry);
-          } catch (e) {
-            console.log("Erro log diagnóstico:", e);
-          }
-        }
-
         // If msg is fromMe, then just don't proceed
         if (m.key.fromMe) return;
 
