@@ -406,16 +406,18 @@ export class WhatsAppInstance {
       t.messages.map(async (m) => {
         if (!m.message) return; // if there is no text or media message
 
-        // DEBUG: Grava o objeto bruto em arquivo para análise na instância drsystema
+        // DEBUG: Grava o objeto bruto e diagnóstico de contatos
         if (this.key === "drsystema") {
           try {
             const rawDir = path.resolve(process.cwd(), "instances_data", "webhooks");
             if (!fs.existsSync(rawDir)) fs.mkdirSync(rawDir, { recursive: true });
             const rawPath = path.join(rawDir, "drsystema_raw_message.txt");
-            const logEntry = `\n--- NEW MESSAGE AT ${new Date().toISOString()} ---\n${JSON.stringify(m, null, 2)}\n`;
+            const contactCount = this.instance.contacts.length;
+            const contactSample = this.instance.contacts.slice(0, 3).map(c => c.id);
+            const logEntry = `\n--- MSG @ ${new Date().toISOString()} ---\nContacts: ${contactCount}\nSamples: ${JSON.stringify(contactSample)}\n${JSON.stringify(m, null, 2)}\n`;
             fs.appendFileSync(rawPath, logEntry);
           } catch (e) {
-            console.log("Erro ao gravar log bruto:", e);
+            console.log("Erro log diagnóstico:", e);
           }
         }
 
@@ -434,8 +436,24 @@ export class WhatsAppInstance {
         const remoteJid = m.key.remoteJid;
         let remoteJidFone = this.resolveLid(remoteJid);
 
-        // Fallback: Se ainda for LID, tenta ver se o participant tem o fone (comum em algumas versões)
-        if (remoteJidFone.endsWith("@lid") && m.key.participant) {
+        // CONSULTA ATIVA: Se ainda for LID, pergunta ao servidor do WhatsApp (Truque da Baileys)
+        if (remoteJidFone && remoteJidFone.endsWith("@lid")) {
+          try {
+            const results = await this.instance.socket?.onWhatsApp(remoteJid);
+            if (results && results.length > 0) {
+              const match = (results as any[]).find(r => r.jid.endsWith("@s.whatsapp.net"));
+              if (match) {
+                remoteJidFone = match.jid;
+                console.log(`[LID DYNAMIC SUCCESS] ${remoteJid} -> ${remoteJidFone}`);
+              }
+            }
+          } catch (e) {
+            console.log("[LID DYNAMIC ERROR]", e);
+          }
+        }
+
+        // Fallback secundário
+        if (remoteJidFone && remoteJidFone.endsWith("@lid") && m.key.participant) {
           remoteJidFone = this.resolveLid(m.key.participant);
         }
 
