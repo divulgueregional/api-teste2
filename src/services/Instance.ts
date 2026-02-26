@@ -22,6 +22,7 @@ import axios from "axios";
 import * as dotenv from "dotenv";
 import fs, { rmSync } from "fs";
 import https from "https"; // Added by Raj
+import path from "path";
 import PinoLogger from "pino";
 import * as Pusher from "pusher";
 import * as QRCode from "qrcode";
@@ -160,14 +161,16 @@ export class WhatsAppInstance {
   }
 
   private getWebhookConfigFile() {
-    return `./instances_data/${this.key}/webhook_config.json`;
+    return path.resolve(process.cwd(), "instances_data", "webhooks", `${this.key}.json`);
   }
 
   private loadWebhookConfig() {
     try {
       const filePath = this.getWebhookConfigFile();
+      console.log(`[WEBHOOK] Tentando carregar de: ${filePath}`);
       if (fs.existsSync(filePath)) {
-        const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+        const fileContent = fs.readFileSync(filePath, "utf-8");
+        const data = JSON.parse(fileContent);
         if (data.url) {
           this.secondaryWebhookUrl = data.url;
           this.secondaryWebhookClient = axios.create({
@@ -177,26 +180,32 @@ export class WhatsAppInstance {
         if (data.sendMessage !== undefined) {
           this.sendSecondaryWebhookMessage = data.sendMessage;
         }
+        console.log(`[WEBHOOK SUCCESS] Configurações carregadas para ${this.key}`);
+      } else {
+        console.log(`[WEBHOOK INFO] Nenhum arquivo de config encontrado em ${filePath}`);
       }
     } catch (error) {
-      console.log("Error loading webhook config:", error);
+      console.log("[WEBHOOK ERROR] Erro ao carregar config:", error);
     }
   }
 
   private saveWebhookConfig() {
     try {
-      const dirPath = `./instances_data/${this.key}`;
+      const filePath = this.getWebhookConfigFile();
+      const dirPath = path.dirname(filePath);
+
       if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true });
       }
-      const filePath = this.getWebhookConfigFile();
+
       const config = {
         url: this.secondaryWebhookUrl,
         sendMessage: this.sendSecondaryWebhookMessage,
       };
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
+      console.log(`[WEBHOOK SAVE] Configurações salvas em: ${filePath}`);
     } catch (error) {
-      console.log("Error saving webhook config:", error);
+      console.log("[WEBHOOK SAVE ERROR] Erro ao salvar config:", error);
     }
   }
 
@@ -237,49 +246,29 @@ export class WhatsAppInstance {
 
     const numericPart = jid.split('@')[0];
 
-    // Log para diagnóstico (visível no console do Docker)
-    console.log(`[LID DEBUG] Resolvendo ${jid}. Contatos em memória: ${this.instance.contacts.length}`);
-
-    // 1. Busca profunda em contatos
+    // 1. Busca profunda em TODOS os contatos filtrando propriedades do Baileys
     for (const c of this.instance.contacts) {
-      const cId = c.id || "";
       const extra = c as any;
+      const cId = c.id || "";
 
-      // Lista de possíveis campos onde o LID pode estar escondido
-      const possibleLids = [
-        extra.lid,
-        extra.pwaLid,
-        extra.phoneNumber,
-        extra.pnJid,
-        extra.actualJid
-      ].filter(Boolean).map(v => v.toString());
+      // Mapeamento de propriedades onde o Baileys/WhatsApp costuma guardar o vínculo
+      const isMatch =
+        cId === jid ||
+        extra.lid === jid ||
+        extra.pwaLid === jid ||
+        extra.pnJid === jid ||
+        (extra.jid && extra.jid === jid);
 
-      // Se o ID deste contato for o LID que buscamos, ou o LID estiver em algum campo extra
-      const isLidMatch = cId === jid || cId.includes(numericPart) || possibleLids.some(l => l === jid || l.includes(numericPart));
-
-      if (isLidMatch) {
-        // Se achamos o match, mas o ID é o LID, tentamos pegar o fone de outro campo
+      if (isMatch) {
         if (cId.endsWith("@s.whatsapp.net")) return cId;
-        if (extra.pnJid && extra.pnJid.endsWith("@s.whatsapp.net")) return extra.pnJid;
         if (extra.id && extra.id.endsWith("@s.whatsapp.net")) return extra.id;
+        if (extra.pnJid && extra.pnJid.endsWith("@s.whatsapp.net")) return extra.pnJid;
       }
     }
 
-    // 2. Busca reversa: Percorre tudo de novo procurando quem tem esse LID associado
-    // (Caso o contato principal seja o Telefone e ele tenha o LID como propriedade)
-    const reverseMatch = this.instance.contacts.find(c => {
-      if (!c.id.endsWith("@s.whatsapp.net")) return false;
-      const ex = c as any;
-      return ex.lid === jid || ex.pwaLid === jid || (ex.lid && ex.lid.includes(numericPart)) || (ex.pwaLid && ex.pwaLid.includes(numericPart));
-    });
-
-    if (reverseMatch) return reverseMatch.id;
-
-    // 3. Fallback para histórico de chats
-    const chatMatch = this.instance.chats.find(c =>
-      c.id === jid || (c as any).lid === jid || (c as any).lid?.includes(numericPart)
-    );
-    if (chatMatch && chatMatch.id.endsWith("@s.whatsapp.net")) return chatMatch.id;
+    // 2. Fallback: Procura nos CHATS
+    const chat = this.instance.chats.find(c => c.id === jid || (c as any).lid === jid);
+    if (chat && chat.id.endsWith("@s.whatsapp.net")) return chat.id;
 
     return jid;
   }
