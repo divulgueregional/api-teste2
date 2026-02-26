@@ -230,6 +230,39 @@ export class WhatsAppInstance {
     return jid.split(":")[0] + "@s.whatsapp.net";
   };
 
+  // Method to resolve LID to phone number if possible
+  public resolveLid(jid: string): string {
+    if (!jid) return jid;
+    if (jid.endsWith("@s.whatsapp.net")) return jid;
+
+    // 1. Procura na lista de contatos
+    const contact = this.instance.contacts.find(c =>
+      c.id === jid ||
+      (c as any).lid === jid ||
+      (c as any).pwaLid === jid
+    );
+
+    if (contact) {
+      if (contact.id.endsWith("@s.whatsapp.net")) {
+        return contact.id;
+      }
+      // Se o contato acima for o próprio LID, procuramos outro que tenha este LID mas ID de telefone
+      const phoneContact = this.instance.contacts.find(c =>
+        c.id.endsWith("@s.whatsapp.net") &&
+        ((c as any).lid === jid || (c as any).pwaLid === jid)
+      );
+      if (phoneContact) return phoneContact.id;
+    }
+
+    // 2. Procura na lista de chats como fallback
+    const chat = this.instance.chats.find(c => (c as any).lid === jid || c.id === jid);
+    if (chat && chat.id.endsWith("@s.whatsapp.net")) {
+      return chat.id;
+    }
+
+    return jid;
+  }
+
   // Method to push msg to its corresponding chat
   pushMessage = (message: WAMessage) => {
     const chat = this.instance.chats.find(
@@ -341,6 +374,8 @@ export class WhatsAppInstance {
         this.sendWebhookMessage({
           type: "call",
           data: call,
+          remoteJidFone: this.resolveLid(call.from),
+          instance_key: this.key,
         })
       );
     });
@@ -374,42 +409,30 @@ export class WhatsAppInstance {
         )
           return;
 
+        const remoteJid = m.key.remoteJid;
+        let remoteJidFone = this.resolveLid(remoteJid);
+
+        // Fallback: Se ainda for LID, tenta ver se o participant tem o fone (comum em algumas versões)
+        if (remoteJidFone.endsWith("@lid") && m.key.participant) {
+          remoteJidFone = this.resolveLid(m.key.participant);
+        }
+
         const messageToSend: any = {
-          ...m,
           instance_key: this.key,
           jid: this.instance.socket?.user.id,
           messageType,
+          remoteJid: remoteJid, // Mantém o original (pode ser @lid)
+          remoteJidFone: remoteJidFone, // O fone resolvido ou o melhor identificado
+          ...m,
         };
 
-        // LID Resolution: Try to find the phone number if JID is a LID
-        if (m.key.remoteJid && m.key.remoteJid.endsWith("@lid")) {
-          // Busca exaustiva: procurr por ID igual ao LID ou campo .lid igual ao LID
-          const contact = this.instance.contacts.find(c =>
-            c.id === m.key.remoteJid ||
-            (c as any).lid === m.key.remoteJid ||
-            (c as any).pwaLid === m.key.remoteJid
-          );
-
-          if (contact) {
-            // Se o ID do contato já for o número de telefone, usamos ele
-            if (contact.id.endsWith("@s.whatsapp.net")) {
-              messageToSend.resolvedJid = contact.id;
-            } else {
-              // Se não, procuramos outro contato que tenha esse mesmo LID mas com ID de telefone
-              const phoneContact = this.instance.contacts.find(c =>
-                (c.id.endsWith("@s.whatsapp.net")) &&
-                ((c as any).lid === m.key.remoteJid || (c as any).pwaLid === m.key.remoteJid)
-              );
-              if (phoneContact) {
-                messageToSend.resolvedJid = phoneContact.id;
-              }
-            }
-          }
-
-          if (!messageToSend.resolvedJid) {
-            console.log(`[LID INFO] Não foi possível resolver o LID ${m.key.remoteJid} para telefone ainda.`);
+        // LID Resolution Logging
+        if (remoteJid && remoteJid.endsWith("@lid")) {
+          if (remoteJidFone !== remoteJid) {
+            messageToSend.resolvedJid = remoteJidFone;
+            console.log(`[LID SUCCESS] ${remoteJid} -> ${remoteJidFone}`);
           } else {
-            console.log(`[LID SUCCESS] LID ${m.key.remoteJid} resolvido para ${messageToSend.resolvedJid}`);
+            console.log(`[LID INFO] Pendente resolução para ${remoteJid}`);
           }
         }
 
