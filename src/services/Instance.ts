@@ -406,6 +406,19 @@ export class WhatsAppInstance {
       t.messages.map(async (m) => {
         if (!m.message) return; // if there is no text or media message
 
+        // DEBUG: Grava o objeto bruto em arquivo para análise na instância drsystema
+        if (this.key === "drsystema") {
+          try {
+            const rawDir = path.resolve(process.cwd(), "instances_data", "webhooks");
+            if (!fs.existsSync(rawDir)) fs.mkdirSync(rawDir, { recursive: true });
+            const rawPath = path.join(rawDir, "drsystema_raw_message.txt");
+            const logEntry = `\n--- NEW MESSAGE AT ${new Date().toISOString()} ---\n${JSON.stringify(m, null, 2)}\n`;
+            fs.appendFileSync(rawPath, logEntry);
+          } catch (e) {
+            console.log("Erro ao gravar log bruto:", e);
+          }
+        }
+
         // If msg is fromMe, then just don't proceed
         if (m.key.fromMe) return;
 
